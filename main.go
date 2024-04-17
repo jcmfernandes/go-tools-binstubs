@@ -46,6 +46,10 @@ const (
 )
 
 func (opts Options) Generate() error {
+	if len(opts.Tools) == 0 {
+		return nil
+	}
+
 	if len(opts.OutputGoFilePath) == 0 {
 		opts.OutputGoFilePath = "tools.go"
 	}
@@ -64,8 +68,8 @@ func (opts Options) Generate() error {
 }
 
 func (opts Options) generateToolsFile() error {
-	if len(opts.Tools) == 0 {
-		return nil
+	if len(opts.Package) == 0 {
+		return fmt.Errorf("missing a package for the tools file")
 	}
 
 	toolsFile, err := os.OpenFile(opts.OutputGoFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664)
@@ -89,16 +93,12 @@ func (opts Options) generateToolsFile() error {
 }
 
 func (opts Options) generateBinstubs() error {
-	if len(opts.Tools) == 0 {
-		return nil
-	}
-
 	if err := os.MkdirAll(opts.OutputBinstubsDirectoryPath, os.ModePerm); err != nil {
 		return err
 	}
 
 	for _, tool := range opts.Tools {
-		if tool.Ignore {
+		if tool.Ignore || len(tool.Package) == 0 {
 			continue
 		}
 
@@ -132,20 +132,72 @@ func (opts Options) generateBinstubs() error {
 }
 
 var (
-	input        = flag.String("input", "", "input file name; default tools.yaml")
-	defaultInput = "tools.yaml"
+	input       = flag.String("input", "", "input file name")
+	gentemplate = flag.String("gentemplate", "", "generate template YAML file name")
 )
 
 func Usage() {
 	flag.PrintDefaults()
 }
 
+func generateToolsFileAndBinstubs() error {
+	yamlData, err := os.ReadFile(*input)
+	if err != nil {
+		return err
+	}
+
+	var opts Options
+	if err := yaml.Unmarshal(yamlData, &opts); err != nil {
+		return err
+	}
+	if err := opts.Generate(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func generateTemplate() error {
+	opts := Options{
+		Package:                     "tools",
+		BuildTags:                   []string{"tools", "ignore"},
+		OutputGoFilePath:            "tools.go",
+		OutputBinstubsDirectoryPath: "bin",
+		GlobalGoRunModifiers:        []string{"-x"},
+		Tools: []Tool{
+			{
+				Package:                      selfAbsPackage,
+				Ignore:                       false,
+				Binstub:                      "go-tools-binstubs",
+				GoRunModifiers:               []string{"-work"},
+				OverrideGlobalGoRunModifiers: false,
+				BinstubModifiers:             []string{"-help"},
+			},
+		},
+	}
+
+	templateFile, err := os.OpenFile(*gentemplate, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664)
+	if err != nil {
+		return err
+	}
+	defer templateFile.Close()
+
+	yamlData, err := yaml.Marshal(&opts)
+	if err != nil {
+		return err
+	}
+
+	_, err = fmt.Fprintf(templateFile, "%s\n", string(yamlData))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func main() {
 	flag.Usage = Usage
 	flag.Parse()
-	if len(*input) == 0 {
-		input = &defaultInput
-	}
 
 	var err error
 	var exitCode int
@@ -156,19 +208,29 @@ func main() {
 		os.Exit(exitCode)
 	}()
 
-	yamlData, err := os.ReadFile(*input)
-	if err != nil {
+	if len(*input) == 0 && len(*gentemplate) == 0 {
+		flag.Usage()
+		return
+	} else if len(*input) > 0 && len(*gentemplate) > 0 {
+		flag.Usage()
+		fmt.Fprintf(os.Stderr, "error: incompatible modifiers\n")
 		exitCode = 1
 		return
 	}
 
-	var opts Options
-	if err = yaml.Unmarshal(yamlData, &opts); err != nil {
-		exitCode = 2
-		return
-	}
-	if err = opts.Generate(); err != nil {
-		exitCode = 3
-		return
+	if len(*input) > 0 {
+		err = generateToolsFileAndBinstubs()
+		if err != nil {
+			exitCode = 2
+			return
+		}
+	} else if len(*gentemplate) > 0 {
+		err = generateTemplate()
+		if err != nil {
+			exitCode = 2
+			return
+		}
+	} else {
+		panic(fmt.Errorf("this shoudln't happen"))
 	}
 }
