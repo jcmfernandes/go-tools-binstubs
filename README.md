@@ -78,6 +78,7 @@ binstubs parent directory. You can use it to change your binstubs `-modfile`:
 package: tools
 global_go_run_modifiers:
   - '-modfile=${binstubAbsParentDirectory}/../internal/tools/go.mod'
+output_binstubs_directory_path: "../../bin"
 tools:
   - package: github.com/jcmfernandes/go-tools-binstubs
 ```
