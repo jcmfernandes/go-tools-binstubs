@@ -1,48 +1,86 @@
 # `go-tools-binstubs`
 
-_Automatically generate binstubs using tools.go_
+_Automatically generate binstubs for the tools in your golang project_
 
 `go-tools-binstubs` is a nearly zero-configuration way to generate project
-binstubs that run the correct version of a go command tracked in your go.mod
-file.
+binstubs that **run the correct version of a go command tracked in your go.mod
+file**.
 
-1. Create a `tools.go` that looks like this, pointing to the executable
+1. Create a `tools.yaml` file that looks like this, pointing to the executable
     program path for each dependency:
 
-``` go
-package main
-
-import (
-    _ "github.com/path/to/dep/cmd/something"
-    _ "github.com/golang-migrate/migrate/v4/cmd/migrate"
-)
+``` yaml
+package: tools
+global_go_run_modifiers:
+  - '-x'
+build_tags:
+  - tools
+  - ignore
+output_go_file_path: tools.go
+output_binstubs_directory_path: bin
+tools:
+  - package: github.com/jcmfernandes/go-tools-binstubs
+    ignore: false
+    binstub: go-tools-binstubs
+    go_run_modifiers:
+      - '-work'
+    override_global_go_run_modifiers: false
+    binstub_modifiers:
+      - '-help'
 ```
 
-2. Run `go run github.com/jcmfernandes/go-tools-binstubs` to create
-   corresponding shell scripts in `bin/`. You can also add a `go:generate`
-   comment to the top of tools.go instead.
+Or run `go run github.com/jcmfernandes/go-tools-binstubs -gentemplate
+tools.yaml` to quickly generate a YAML template.
 
-3. If you need to import a tool that you don't want a binstub for, add an
-   inline `binstub:"-"` comment after the import:
+2. Run `go run github.com/jcmfernandes/go-tools-binstubs -input tools.yaml` to create
+   corresponding shell scripts in `output_binstubs_directory_path` (defaults to `bin`) and go file in `output_go_file_path` (defaults to `tools.go`).
 
-``` go
-import (
-    _ "github.com/path/to/dep/cmd/something" // binstub:"-"
-)
+## Using a separate `go.mod` file
+
+It's a good practice to create a separate `go.mod` file for your project's tool. Let's say you have the following project setup:
+
+```
+.
+├── go.mod
+├── go.sum
+├── internal
+│   └── tools
+│       ├── go.mod
+│       ├── tools.yaml
+│       └── go.sum
+└── main.go
 ```
 
-4. If you need extra flags passed to `go run`, add an inline
-   `binstub:foo,-tags,tools"` comment after the import:
+And you want it to look like the following:
 
-``` go
-import (
-    _ "github.com/path/to/dep/cmd/something" // binstub:"foo,-tags,tools"
-)
+```
+.
+├── bin
+│   └── a-tool
+├── go.mod
+├── go.sum
+├── internal
+│   └── tools
+│       ├── go.mod
+│       ├── tools.yaml
+│       ├── tools.go
+│       └── go.sum
+└── main.go
 ```
 
-    Where `foo` is the name of the binstub and `-tags,tools` are the extra
-    flags, that are joined with whitespaces.
+You have to change your binstubs `-modfile` to `./internal/tools/go.mod`. Since
+you don't want to hardcode paths in your binstubs, every binstub ships with bash
+variable `binstubAbsParentDirectory` that contains the runtime absolute path to
+the binstubs parent directory. You can use it to change your binstubs `-modfile`:
+
+``` yaml
+package: tools
+global_go_run_modifiers:
+  - '-modfile=${binstubAbsParentDirectory}/../internal/tools/go.mod'
+tools:
+  - package: github.com/jcmfernandes/go-tools-binstubs
+```
 
 ## Acknowledgements
 
-`go-tools-binstubs` is a fork of [binstubs](https://github.com/brasic/binstubs).
+`go-tools-binstubs` started as a fork of [binstubs](https://github.com/brasic/binstubs).
