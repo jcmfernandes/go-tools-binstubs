@@ -68,10 +68,11 @@ And you want it to look like the following:
 └── main.go
 ```
 
-You have to change your binstubs `-modfile` to `./internal/tools/go.mod`. Since
-you don't want to hardcode paths in your binstubs, every binstub ships with bash
-variable `binstubAbsParentDirectory` that contains the runtime absolute path to
-the binstubs parent directory. You can use it to change your binstubs `-modfile`:
+You'll have to change your binstubs `-modfile` to `./internal/tools/go.mod` to
+make this work. Since you don't want to hardcode paths in your binstubs (you
+want them to work on everyone's machine), every binstub ships with bash variable
+`binstubAbsParentDirectory` that contains the runtime absolute path to the
+binstubs parent directory. You can use it to change your binstubs `-modfile`:
 
 ``` yaml
 package: tools
@@ -80,6 +81,8 @@ global_go_run_modifiers:
 tools:
   - package: github.com/jcmfernandes/go-tools-binstubs
 ```
+
+And _voilà_!
 
 ## Acknowledgements
 
