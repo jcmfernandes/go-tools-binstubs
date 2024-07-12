@@ -12,7 +12,11 @@ import (
 
 type Tool struct {
 	Package string `yaml:"package"`
-	Ignore  bool   `yaml:"ignore"`
+	// Defaults to `true`.
+	AddToGoFile *bool  `yaml:"add_to_go_file"`
+	Version     string `yaml:"version"`
+	// Defaults to `true`.
+	GenerateBinstub *bool `yaml:"generate_binstub"`
 	// Defaults to the last component of the package.
 	Binstub                      string   `yaml:"binstub"`
 	GoRunModifiers               []string `yaml:"go_run_modifiers,flow"`
@@ -34,6 +38,8 @@ type Options struct {
 	GlobalGoRunModifiers []string `yaml:"global_go_run_modifiers,flow"`
 	BuildTags            []string `yaml:"build_tags,flow"`
 
+	// Defaults to `true`.
+	OutputGoFile *bool `yaml:"output_go_file"`
 	// Defaults to `./tools.go`.
 	OutputGoFilePath string `yaml:"output_go_file_path"`
 	// Defaults to `./bin`.
@@ -50,6 +56,10 @@ func (opts Options) Generate() error {
 		return nil
 	}
 
+	var t bool = true
+	if opts.OutputGoFile == nil {
+		opts.OutputGoFile = &t
+	}
 	if len(opts.OutputGoFilePath) == 0 {
 		opts.OutputGoFilePath = "tools.go"
 	}
@@ -57,8 +67,19 @@ func (opts Options) Generate() error {
 		opts.OutputBinstubsDirectoryPath = "bin"
 	}
 
-	if err := opts.generateToolsFile(); err != nil {
-		return err
+	for _, tool := range opts.Tools {
+		if tool.AddToGoFile == nil {
+			tool.AddToGoFile = &t
+		}
+		if tool.GenerateBinstub == nil {
+			tool.GenerateBinstub = &t
+		}
+	}
+
+	if *opts.OutputGoFile {
+		if err := opts.generateToolsFile(); err != nil {
+			return err
+		}
 	}
 	if err := opts.generateBinstubs(); err != nil {
 		return err
@@ -85,6 +106,10 @@ func (opts Options) generateToolsFile() error {
 	fmt.Fprintf(toolsFile, "\npackage %s\n", opts.Package)
 	fmt.Fprintf(toolsFile, "\nimport (\n")
 	for _, tool := range opts.Tools {
+		if len(tool.Version) > 0 {
+			continue
+		}
+
 		fmt.Fprintf(toolsFile, "\t_ \"%s\"\n", tool.Package)
 	}
 	fmt.Fprintf(toolsFile, ")\n")
@@ -98,7 +123,7 @@ func (opts Options) generateBinstubs() error {
 	}
 
 	for _, tool := range opts.Tools {
-		if tool.Ignore || len(tool.Package) == 0 {
+		if *tool.GenerateBinstub || len(tool.Package) == 0 {
 			continue
 		}
 
@@ -119,7 +144,11 @@ func (opts Options) generateBinstubs() error {
 
 		var goRunCommand = []string{"go run"}
 		goRunCommand = append(goRunCommand, goRunModifiers...)
-		goRunCommand = append(goRunCommand, tool.Package)
+		if len(tool.Version) == 0 {
+			goRunCommand = append(goRunCommand, tool.Package)
+		} else {
+			goRunCommand = append(goRunCommand, fmt.Sprintf("%s@%s", tool.Package, tool.Version))
+		}
 		goRunCommand = append(goRunCommand, tool.BinstubModifiers...)
 
 		fmt.Fprintf(binstubFile, "#!/usr/bin/env bash\n")
@@ -158,16 +187,21 @@ func generateToolsFileAndBinstubs() error {
 }
 
 func generateTemplate() error {
+	var f bool
+	var t bool = true
 	opts := Options{
 		Package:                     "tools",
 		BuildTags:                   []string{"tools", "ignore"},
+		OutputGoFile:                &t,
 		OutputGoFilePath:            "tools.go",
 		OutputBinstubsDirectoryPath: "bin",
 		GlobalGoRunModifiers:        []string{"-x"},
 		Tools: []Tool{
 			{
 				Package:                      selfAbsPackage,
-				Ignore:                       false,
+				GenerateBinstub:              &t,
+				AddToGoFile:                  &f,
+				Version:                      "v1.2.3",
 				Binstub:                      "go-tools-binstubs",
 				GoRunModifiers:               []string{"-work"},
 				OverrideGlobalGoRunModifiers: false,
