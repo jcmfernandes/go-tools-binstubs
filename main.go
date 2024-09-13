@@ -239,6 +239,10 @@ func main() {
 	var err error
 	var exitCode int
 	defer func() {
+		if r := recover(); r != nil {
+			panic(r)
+		}
+
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %s\n", err.Error())
 		}
