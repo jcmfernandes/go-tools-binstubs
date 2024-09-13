@@ -47,6 +47,8 @@ type Options struct {
 }
 
 const (
+	goToolsBinstubsVersion = "v0.0.6"
+
 	selfAbsPackage                      = "github.com/jcmfernandes/go-tools-binstubs"
 	bashSourceAbsParentDirectoryVarName = "binstubAbsParentDirectory"
 )
@@ -163,6 +165,7 @@ func (opts Options) generateBinstubs() error {
 var (
 	input       = flag.String("input", "", "input file name")
 	gentemplate = flag.String("gentemplate", "", "generate template YAML file name")
+	version     = flag.Bool("version", false, "print the version")
 )
 
 func Usage() {
@@ -241,6 +244,11 @@ func main() {
 		}
 		os.Exit(exitCode)
 	}()
+
+	if *version {
+		fmt.Println(goToolsBinstubsVersion)
+		return
+	}
 
 	if len(*input) == 0 && len(*gentemplate) == 0 {
 		flag.Usage()
