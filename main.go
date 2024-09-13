@@ -34,7 +34,7 @@ func (t Tool) BinstubFilename() string {
 
 type Options struct {
 	Package              string   `yaml:"package"`
-	Tools                []Tool   `yaml:"tools,flow"`
+	Tools                []*Tool  `yaml:"tools,flow"`
 	GlobalGoRunModifiers []string `yaml:"global_go_run_modifiers,flow"`
 	BuildTags            []string `yaml:"build_tags,flow"`
 
@@ -123,7 +123,7 @@ func (opts Options) generateBinstubs() error {
 	}
 
 	for _, tool := range opts.Tools {
-		if *tool.GenerateBinstub || len(tool.Package) == 0 {
+		if !*tool.GenerateBinstub || len(tool.Package) == 0 {
 			continue
 		}
 
@@ -196,7 +196,7 @@ func generateTemplate() error {
 		OutputGoFilePath:            "tools.go",
 		OutputBinstubsDirectoryPath: "bin",
 		GlobalGoRunModifiers:        []string{"-x"},
-		Tools: []Tool{
+		Tools: []*Tool{
 			{
 				Package:                      selfAbsPackage,
 				GenerateBinstub:              &t,
