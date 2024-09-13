@@ -273,6 +273,6 @@ func main() {
 			return
 		}
 	} else {
-		panic(fmt.Errorf("this shoudln't happen"))
+		panic(fmt.Errorf("this shouldn't happen"))
 	}
 }
