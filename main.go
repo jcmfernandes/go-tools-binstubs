@@ -245,6 +245,9 @@ func main() {
 
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %s\n", err.Error())
+			if exitCode == 0 {
+				exitCode = -42
+			}
 		}
 		os.Exit(exitCode)
 	}()
