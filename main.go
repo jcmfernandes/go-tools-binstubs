@@ -108,7 +108,7 @@ func (opts Options) generateToolsFile() error {
 	fmt.Fprintf(toolsFile, "\npackage %s\n", opts.Package)
 	fmt.Fprintf(toolsFile, "\nimport (\n")
 	for _, tool := range opts.Tools {
-		if len(tool.Version) > 0 {
+		if !(*tool.AddToGoFile) || len(tool.Version) > 0 {
 			continue
 		}
 
