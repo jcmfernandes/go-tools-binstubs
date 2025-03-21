@@ -21,6 +21,7 @@ output_binstubs_directory_path: bin
 tools:
   - package: github.com/jcmfernandes/go-tools-binstubs
     ignore: false
+    add_to_go_mod_file: true
     binstub: go-tools-binstubs
     go_run_modifiers:
       - '-work'
