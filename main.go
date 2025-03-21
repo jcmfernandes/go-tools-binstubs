@@ -13,8 +13,8 @@ import (
 type Tool struct {
 	Package string `yaml:"package"`
 	// Defaults to `true`.
-	AddToGoFile *bool  `yaml:"add_to_go_file"`
-	Version     string `yaml:"version"`
+	AddToGoModFile *bool  `yaml:"add_to_go_mod_file"`
+	Version        string `yaml:"version"`
 	// Defaults to `true`.
 	GenerateBinstub *bool `yaml:"generate_binstub"`
 	// Defaults to the last component of the package.
@@ -70,8 +70,8 @@ func (opts Options) Generate() error {
 	}
 
 	for _, tool := range opts.Tools {
-		if tool.AddToGoFile == nil {
-			tool.AddToGoFile = &t
+		if tool.AddToGoModFile == nil {
+			tool.AddToGoModFile = &t
 		}
 		if tool.GenerateBinstub == nil {
 			tool.GenerateBinstub = &t
@@ -108,7 +108,7 @@ func (opts Options) generateToolsFile() error {
 	fmt.Fprintf(toolsFile, "\npackage %s\n", opts.Package)
 	fmt.Fprintf(toolsFile, "\nimport (\n")
 	for _, tool := range opts.Tools {
-		if !(*tool.AddToGoFile) || len(tool.Version) > 0 {
+		if !(*tool.AddToGoModFile) || len(tool.Version) > 0 {
 			continue
 		}
 
@@ -203,7 +203,7 @@ func generateTemplate() error {
 			{
 				Package:                      selfAbsPackage,
 				GenerateBinstub:              &t,
-				AddToGoFile:                  &f,
+				AddToGoModFile:               &f,
 				Version:                      "v1.2.3",
 				Binstub:                      "go-tools-binstubs",
 				GoRunModifiers:               []string{"-work"},
